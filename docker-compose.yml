@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: youthpulse_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend
+    container_name: youthpulse_backend
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - DB_NAME=${DB_NAME:-youth_pulse_db}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: youthpulse_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo_data:

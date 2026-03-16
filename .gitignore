@@ -1,0 +1,56 @@
+# Gitignore для проєкту DeplomaV2
+# Охоплює Python-бекэнд та Node.js/TypeScript/React-фронтенд
+
+# --- Загальні файли та директорії для ігнорування ---
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+*.log
+tmp/
+temp/
+
+# --- Python Бекэнд ---
+# Віртуальне оточення
+/backend/venv/
+# Байтові файли Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+# Пакувальні файли
+.Python
+env/
+# Тести
+.pytest_cache/
+.mypy_cache/
+
+# --- Node.js / TypeScript / React Фронтенд ---
+# Директорії залежностей
+/frontend/node_modules/
+# Директорії збірки (Vite)
+/frontend/dist/
+/frontend/build/
+/frontend/.vite/
+# Лог-файли NPM/Yarn/PNPM
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/pnpm-debug.log*
+# Покриття тестами
+/frontend/coverage/
+# Внутрішні файли, що генеруються
+/frontend/.eslintcache
+/frontend/.next/ # Якщо використовується Next.js, хоча у вас Vite
+
+# --- IDE та редактори ---
+.idea/             # IntelliJ / PyCharm
+.vscode/           # VS Code
+*.sublime-project  # Sublime Text
+*.sublime-workspace
+# Додаткові файли VS Code (якщо вони не мають бути у репозиторії)
+.vscode/*.code-workspace
+
+# --- Інші файли, специфічні для проєкту ---
+ngrok.yml          # Локальна конфігурація ngrok
