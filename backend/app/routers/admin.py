@@ -28,12 +28,12 @@ class SaveSurveyRequest(BaseModel):
     dropped_columns: List[str]
 
 class UpdateSurveyRequest(BaseModel):
-    title: str
-    organization: str
-    participants: int
-    date: str
-    ai_description: str
-    is_published: Optional[bool] = False
+    title: Optional[str] = None
+    organization: Optional[str] = None
+    participants: Optional[int] = None
+    date: Optional[str] = None
+    ai_description: Optional[str] = None
+    is_published: Optional[bool] = None
 
 class GenerateDescRequest(BaseModel):
     title: str
@@ -133,7 +133,10 @@ def update_survey(survey_id: str, req: UpdateSurveyRequest):
     except:
         query = {"id": int(survey_id) if survey_id.isdigit() else survey_id}
 
-    db.surveys.update_one(query, {"$set": req.dict()})
+    # Only update fields that were actually provided in the request
+    update_data = req.dict(exclude_unset=True)
+    if update_data:
+        db.surveys.update_one(query, {"$set": update_data})
     return {"status": "updated"}
 
 @router.delete("/survey/{survey_id}")

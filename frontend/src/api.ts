@@ -38,11 +38,6 @@ export const saveSurvey = async (data: any) => {
     return response.data;
 };
 
-export const analyzeQuestion = async (surveyId: string | number, idx: number, data: any) => {
-    const response = await api.post(`surveys/${surveyId}/analyze/question/${idx}`, data);
-    return response.data;
-};
-
 export const analyzeAll = async (surveyId: string | number, title: string, questions: any[]) => {
     const response = await api.post(`surveys/${surveyId}/analyze/all`, { title, questions });
     return response.data;

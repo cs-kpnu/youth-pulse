@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSurvey, analyzeQuestion, analyzeAll, exportSurveyPdf } from '../api';
+import { getSurvey, analyzeAll, exportSurveyPdf } from '../api';
 import { Survey, Question } from '../types';
 import { Button, Card, Row, Col, Spinner, Alert, Badge } from 'react-bootstrap';
 import Plot from 'react-plotly.js';
@@ -12,7 +12,6 @@ const DashboardPage = () => {
     const navigate = useNavigate();
     const [survey, setSurvey] = useState<Survey | null>(null);
     const [loading, setLoading] = useState(true);
-    const [analyzing, setAnalyzing] = useState<{ [key: number]: boolean }>({});
     const [analyzingAll, setAnalyzingAll] = useState(false);
     const [activeQuestion, setActiveQuestion] = useState<number>(0);
     const [exportingPdf, setExportingPdf] = useState(false);
@@ -76,27 +75,6 @@ const DashboardPage = () => {
             .then(data => setSurvey(data))
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
-    };
-
-    const handleAnalyze = async (idx: number, q: Question) => {
-        if (!survey) return;
-        setAnalyzing(prev => ({ ...prev, [idx]: true }));
-        try {
-            let data = q.data;
-            if (q.type === 'text') data = q.data.answers || [];
-            const res = await analyzeQuestion(survey.id, idx, {
-                question_text: q.text,
-                data: data,
-                data_type: q.type
-            });
-            const newQuestions = [...(survey.questions || [])];
-            newQuestions[idx].ai_analysis = res.analysis;
-            setSurvey({ ...survey, questions: newQuestions });
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setAnalyzing(prev => ({ ...prev, [idx]: false }));
-        }
     };
 
     const handleAnalyzeAll = async () => {
@@ -416,9 +394,8 @@ const DashboardPage = () => {
                                                     <div className="text-secondary" style={{ whiteSpace: 'pre-line', lineHeight: '1.7', fontSize: '0.95rem' }}>{q.ai_analysis}</div>
                                                 </div>
                                             ) : (
-                                                <div className="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                                                    <div className="text-muted fst-italic small">Автоматичний аналіз результатів ще не проведено...</div>
-                                                    <Button variant="outline-primary" size="sm" className="rounded-pill px-3" onClick={() => handleAnalyze(idx, q)} disabled={analyzing[idx]}>{analyzing[idx] ? <Spinner size="sm" animation="border"/> : <><Sparkles size={14} className="me-1"/> Аналізувати</>}</Button>
+                                                <div className="text-muted fst-italic small">
+                                                    Автоматичний аналіз результатів ще не проведено. Використайте кнопку "🚀 Проаналізувати ВСЕ" вище.
                                                 </div>
                                             )}
                                         </div>
