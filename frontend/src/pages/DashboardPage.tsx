@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSurvey, analyzeAll, exportSurveyPdf } from '../api';
+import { getSurvey, exportSurveyPdf } from '../api';
 import { Survey, Question } from '../types';
 import { Button, Card, Row, Col, Spinner, Alert, Badge } from 'react-bootstrap';
 import Plot from 'react-plotly.js';
@@ -12,7 +12,6 @@ const DashboardPage = () => {
     const navigate = useNavigate();
     const [survey, setSurvey] = useState<Survey | null>(null);
     const [loading, setLoading] = useState(true);
-    const [analyzingAll, setAnalyzingAll] = useState(false);
     const [activeQuestion, setActiveQuestion] = useState<number>(0);
     const [exportingPdf, setExportingPdf] = useState(false);
 
@@ -75,19 +74,6 @@ const DashboardPage = () => {
             .then(data => setSurvey(data))
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
-    };
-
-    const handleAnalyzeAll = async () => {
-        if (!survey || !survey.questions) return;
-        setAnalyzingAll(true);
-        try {
-            await analyzeAll(survey.id, survey.title, survey.questions);
-            loadSurvey(id!);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setAnalyzingAll(false);
-        }
     };
 
     const handleExportPdf = async () => {
@@ -277,8 +263,6 @@ const DashboardPage = () => {
     
     if (!survey) return <Alert variant="danger">Опитування не знайдено</Alert>;
 
-    const missingAnalysis = survey.questions?.some(q => !q.ai_analysis);
-
     return (
         <div className="fade-in-up">
             <Button variant="link" className="mb-3 ps-0 text-decoration-none text-muted fw-bold" onClick={() => navigate('/surveys')}>
@@ -365,18 +349,6 @@ const DashboardPage = () => {
                         </Card.Body>
                     </Card>
                     
-                    {missingAnalysis && (
-                        <div className="mb-5 p-4 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-3">
-                            <div>
-                                <h5 className="fw-bold mb-1 text-primary d-flex align-items-center gap-2"><Sparkles size={20} /> AI Аналітика доступна</h5>
-                                <p className="mb-0 text-secondary small">Згенеруйте глибокі інсайти для всього опитування одним кліком.</p>
-                            </div>
-                            <Button variant="primary" size="lg" className="fw-bold shadow-sm rounded-pill px-4" onClick={handleAnalyzeAll} disabled={analyzingAll}>
-                                {analyzingAll ? <Spinner size="sm" animation="border"/> : '🚀 Проаналізувати ВСЕ'}
-                            </Button>
-                        </div>
-                    )}
-
                     <div className="d-flex flex-column gap-5">
                         {survey.questions?.map((q, idx) => (
                             <div key={idx} id={`question-${idx}`} className="question-card scroll-margin-top" data-index={idx}>
@@ -395,7 +367,7 @@ const DashboardPage = () => {
                                                 </div>
                                             ) : (
                                                 <div className="text-muted fst-italic small">
-                                                    Автоматичний аналіз результатів ще не проведено. Використайте кнопку "🚀 Проаналізувати ВСЕ" вище.
+                                                    Автоматичний аналіз результатів ще не проведено.
                                                 </div>
                                             )}
                                         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Button, Form, Table, Card, Tabs, Tab, Modal, Badge, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Button, Form, Table, Card, Tabs, Tab, Modal, Badge, Spinner, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { 
     uploadFile, 
@@ -8,7 +8,8 @@ import {
     updateSurvey, 
     deleteSurvey, 
     generateDescription,
-    exportSurveyPdf
+    exportSurveyPdf,
+    analyzeAll
 } from '../api';
 import { ColumnInfo, Survey } from '../types';
 import { 
@@ -28,24 +29,31 @@ import {
     PlusCircle,
     Download,
     Eye,
-    EyeOff
+    EyeOff,
+    AlertTriangle,
+    ExternalLink
 } from 'lucide-react';
 
 const AdminPage = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('manage');
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [ownerId, setOwnerId] = useState<string | null>(null);
     
-    // --- Management State (ex EditorPage) ---
+    // --- Management State ---
     const [surveys, setSurveys] = useState<Survey[]>([]);
     const [editingSurvey, setEditingSurvey] = useState<Survey | null>(null);
     const [showEditModal, setShowModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [ownerFilter, setOwnerFilter] = useState('all');
     const [editForm, setEditForm] = useState<any>({});
     const [generating, setGenerating] = useState(false);
+    const [analyzingId, setAnalyzingId] = useState<string | null>(null);
     const [exportingAllPdf, setExportingAllPdf] = useState(false);
     const [exportingId, setExportingId] = useState<string | null>(null);
 
-    // --- Import State (ex AdminPage) ---
+    // --- Import State ---
     const [importStep, setImportStep] = useState(0);
     const [file, setFile] = useState<File | null>(null);
     const [uploadData, setUploadData] = useState<any>(null);
@@ -54,18 +62,39 @@ const AdminPage = () => {
     const [newOrg, setNewOrg] = useState('IT Kamianets');
     const [selectedTypes, setSelectedTypes] = useState<{[key: string]: string}>({});
     const [droppedCols, setDroppedCols] = useState<string[]>([]);
+    const [duplicateAlert, setDuplicateAlert] = useState<{title: string, id: string} | null>(null);
 
     useEffect(() => {
         const isAdmin = localStorage.getItem('isAdmin');
+        const role = localStorage.getItem('userRole');
+        const owner = localStorage.getItem('ownerId');
+        
         if (!isAdmin) {
             navigate('/login');
             return;
         }
+        
+        setUserRole(role);
+        setOwnerId(owner);
         loadSurveys();
     }, []);
 
     const loadSurveys = () => {
         getAllSurveysFull().then(setSurveys).catch(console.error);
+    };
+
+    const handleAnalyzeSurvey = async (survey: Survey) => {
+        const id = survey._id || String(survey.id);
+        setAnalyzingId(id);
+        try {
+            await analyzeAll(id, survey.title, survey.questions || []);
+            loadSurveys(); // Refresh to show new analysis status
+        } catch(e) {
+            console.error(e);
+            alert("Помилка під час аналізу");
+        } finally {
+            setAnalyzingId(null);
+        }
     };
 
     const downloadBlob = (blob: Blob, filename: string) => {
@@ -101,7 +130,6 @@ const AdminPage = () => {
                 const id = s._id || String(s.id);
                 const blob = await exportSurveyPdf(id);
                 downloadBlob(blob, `survey_${id}.pdf`);
-                // Add a small delay between downloads to be nice to the browser
                 await new Promise(r => setTimeout(r, 500));
             }
         } catch (e) {
@@ -127,9 +155,10 @@ const AdminPage = () => {
     };
 
     const handleTogglePublish = async (survey: Survey) => {
+        if (userRole === 'guest') return; 
+        
         const id = survey._id || String(survey.id);
         const newState = !survey.is_published;
-        // Optimistic UI
         setSurveys(prev => prev.map(s => (s._id === id || String(s.id) === id) ? { ...s, is_published: newState } : s));
         try {
             await updateSurvey(id, { ...survey, is_published: newState });
@@ -171,8 +200,16 @@ const AdminPage = () => {
     const handleFileUpload = async () => {
         if (!file) return;
         setImportLoading(true);
+        setDuplicateAlert(null);
         try {
             const res = await uploadFile(file);
+            
+            if (res.duplicate_found) {
+                setDuplicateAlert({ title: res.duplicate_found, id: res.duplicate_id });
+                setImportLoading(false);
+                return; // STOP HERE, don't go to step 1
+            }
+            
             setUploadData(res);
             const types: any = {};
             res.columns.forEach((c: ColumnInfo) => {
@@ -198,14 +235,17 @@ const AdminPage = () => {
                 organization: newOrg,
                 participants: 0,
                 selected_types: selectedTypes,
-                dropped_columns: droppedCols
+                dropped_columns: droppedCols,
+                owner_id: ownerId
             });
             setImportStep(0);
             setFile(null);
+            setDuplicateAlert(null);
             loadSurveys();
             setActiveTab('manage');
-        } catch (e) {
-            alert('Помилка збереження опитування');
+        } catch (e: any) {
+            const msg = e.response?.data?.detail || 'Помилка збереження опитування';
+            alert(msg);
         } finally {
             setImportLoading(false);
         }
@@ -219,16 +259,32 @@ const AdminPage = () => {
         }
     };
 
-    const filteredSurveys = surveys.filter(s => 
-        s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (s.organization || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const uniqueOwners = Array.from(new Set(surveys.map(s => s.owner_id || 'root'))).filter(o => o !== 'root');
+
+    const filteredSurveys = surveys.filter(s => {
+        const matchesSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             (s.organization || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || 
+                             (statusFilter === 'published' && s.is_published) || 
+                             (statusFilter === 'draft' && !s.is_published);
+        const matchesOwner = ownerFilter === 'all' || (s.owner_id || 'root') === ownerFilter;
+        
+        return matchesSearch && matchesStatus && matchesOwner;
+    });
 
     return (
         <Container className="fade-in-up py-4">
-            <div className="mb-5">
-                <h1 className="fw-bold mb-1">🛠 Адмін-панель</h1>
-                <p className="text-muted">Централізоване керування всіма даними платформи</p>
+            <div className="mb-5 d-flex justify-content-between align-items-end">
+                <div>
+                    <h1 className="fw-bold mb-1">🛠 Адмін-панель</h1>
+                    <p className="text-muted">Централізоване керування всіма даними платформи</p>
+                </div>
+                {userRole === 'guest' && (
+                    <Badge bg="info" className="mb-2 p-2 px-3 rounded-pill bg-opacity-10 text-info border border-info border-opacity-25 fw-medium">
+                        <Building2 size={14} className="me-2" />
+                        Гість: {ownerId}
+                    </Badge>
+                )}
             </div>
 
             <Tabs
@@ -240,8 +296,8 @@ const AdminPage = () => {
                     <div className="pt-3">
                         <Card className="material-card border-0 mb-4 shadow-sm">
                             <Card.Body className="p-4">
-                                <Row className="align-items-center">
-                                    <Col md={6}>
+                                <Row className="g-3 align-items-center">
+                                    <Col lg={4}>
                                         <div className="position-relative">
                                             <Search className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" size={18} />
                                             <Form.Control 
@@ -253,12 +309,38 @@ const AdminPage = () => {
                                             />
                                         </div>
                                     </Col>
-                                    <Col md={6} className="text-md-end mt-3 mt-md-0">
+                                    <Col md={3} lg={2}>
+                                        <Form.Select 
+                                            value={statusFilter} 
+                                            onChange={e => setStatusFilter(e.target.value)}
+                                            className="bg-light border-0 rounded-pill py-2 shadow-none small fw-medium"
+                                        >
+                                            <option value="all">Всі статуси</option>
+                                            <option value="published">Публічні</option>
+                                            <option value="draft">Чернетки</option>
+                                        </Form.Select>
+                                    </Col>
+                                    {userRole === 'admin' && (
+                                        <Col md={3} lg={2}>
+                                            <Form.Select 
+                                                value={ownerFilter} 
+                                                onChange={e => setOwnerFilter(e.target.value)}
+                                                className="bg-light border-0 rounded-pill py-2 shadow-none small fw-medium"
+                                            >
+                                                <option value="all">Всі автори</option>
+                                                <option value="root">Головний адмін</option>
+                                                {uniqueOwners.map(o => (
+                                                    <option key={o} value={o}>{o}</option>
+                                                ))}
+                                            </Form.Select>
+                                        </Col>
+                                    )}
+                                    <Col className="text-md-end">
                                         <Button variant="outline-primary" className="rounded-pill px-4 me-2" onClick={handleExportAllPdf} disabled={exportingAllPdf}>
-                                            {exportingAllPdf ? <Spinner size="sm" animation="border" /> : <><Download size={18} className="me-2" /> Експорт всіх в PDF</>}
+                                            {exportingAllPdf ? <Spinner size="sm" animation="border" /> : <><Download size={18} className="me-2" /> Експорт PDF</>}
                                         </Button>
                                         <Button variant="primary" className="rounded-pill px-4" onClick={() => setActiveTab('import')}>
-                                            <PlusCircle size={18} className="me-2" /> Новий імпорт
+                                            <PlusCircle size={18} className="me-2" /> Імпорт
                                         </Button>
                                     </Col>
                                 </Row>
@@ -278,7 +360,7 @@ const AdminPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredSurveys.map((s, i) => (
+                                        {filteredSurveys.length > 0 ? filteredSurveys.map((s, i) => (
                                             <tr key={s._id || s.id || i}>
                                                 <td className="px-4 py-3">
                                                     <div className="d-flex align-items-center gap-2">
@@ -294,9 +376,9 @@ const AdminPage = () => {
                                                 <td className="px-4 py-3 text-center">
                                                     <Badge 
                                                         bg={s.is_published ? "success" : "secondary"} 
-                                                        className="rounded-pill px-3 py-2 cursor-pointer"
+                                                        className={`rounded-pill px-3 py-2 ${userRole !== 'guest' ? 'cursor-pointer' : ''}`}
                                                         onClick={() => handleTogglePublish(s)}
-                                                        style={{ cursor: 'pointer' }}
+                                                        style={{ cursor: userRole !== 'guest' ? 'pointer' : 'default' }}
                                                     >
                                                         {s.is_published ? <><Eye size={12} className="me-1"/> Публічно</> : <><EyeOff size={12} className="me-1"/> Чернетка</>}
                                                     </Badge>
@@ -306,6 +388,16 @@ const AdminPage = () => {
                                                 </td>
                                                 <td className="px-4 py-3 text-end">
                                                     <div className="d-flex justify-content-end gap-2">
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="outline-primary" 
+                                                            className="rounded-circle p-2 border-0" 
+                                                            onClick={() => handleAnalyzeSurvey(s)}
+                                                            title="Аналізувати"
+                                                            disabled={analyzingId === (s._id || String(s.id))}
+                                                        >
+                                                            {analyzingId === (s._id || String(s.id)) ? <Spinner size="sm" animation="border" /> : <Sparkles size={18} />}
+                                                        </Button>
                                                         <Button 
                                                             size="sm" 
                                                             variant="outline-primary" 
@@ -324,18 +416,26 @@ const AdminPage = () => {
                                                         >
                                                             <Edit3 size={18} />
                                                         </Button>
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline-danger" 
-                                                            className="rounded-circle p-2 border-0" 
-                                                            onClick={() => handleDelete(s._id || String(s.id))}
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </Button>
+                                                        {userRole !== 'guest' && (
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline-danger" 
+                                                                className="rounded-circle p-2 border-0" 
+                                                                onClick={() => handleDelete(s._id || String(s.id))}
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        )) : (
+                                            <tr>
+                                                <td colSpan={5} className="text-center py-5 text-muted">
+                                                    Опитувань не знайдено
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </Table>
                             </div>
@@ -345,6 +445,29 @@ const AdminPage = () => {
 
                 <Tab eventKey="import" title={<span><PlusCircle size={18} className="me-2" /> Новий імпорт</span>}>
                     <div className="pt-3">
+                        {duplicateAlert && (
+                            <Row className="justify-content-center mb-4">
+                                <Col lg={6}>
+                                    <Alert variant="warning" className="border-0 shadow-sm d-flex align-items-center justify-content-between fade-in-up">
+                                        <div className="d-flex align-items-center gap-2">
+                                            <AlertTriangle size={20} />
+                                            <div>
+                                                <strong>Увага!</strong> Таке опитування вже завантажене: <strong>"{duplicateAlert.title}"</strong>.
+                                            </div>
+                                        </div>
+                                        <Button 
+                                            variant="outline-warning" 
+                                            size="sm" 
+                                            className="rounded-pill"
+                                            onClick={() => navigate(`/dashboard/${duplicateAlert.id}`)}
+                                        >
+                                            <ExternalLink size={14} className="me-1" /> Перейти
+                                        </Button>
+                                    </Alert>
+                                </Col>
+                            </Row>
+                        )}
+
                         {importStep === 0 && (
                             <Row className="justify-content-center">
                                 <Col lg={6}>
@@ -458,12 +581,16 @@ const AdminPage = () => {
                                         </Table>
                                     </div>
                                     <div className="p-4 bg-light d-flex justify-content-between">
-                                        <Button variant="link" className="text-muted text-decoration-none" onClick={() => setImportStep(0)}>
+                                        <Button variant="link" className="text-muted text-decoration-none" onClick={() => { setImportStep(0); setDuplicateAlert(null); }}>
                                             Повернутися
                                         </Button>
-                                        <Button className="rounded-pill px-5 fw-bold shadow-sm" onClick={handleSaveNewSurvey} disabled={importLoading}>
+                                        <Button 
+                                            className="rounded-pill px-5 fw-bold shadow-sm" 
+                                            onClick={handleSaveNewSurvey} 
+                                            disabled={importLoading || !!duplicateAlert}
+                                        >
                                             {importLoading ? <RefreshCw className="spin me-2" /> : <Save size={18} className="me-2" />}
-                                            Зберегти опитування
+                                            {duplicateAlert ? 'Дублікат знайдено' : 'Зберегти опитування'}
                                         </Button>
                                     </div>
                                 </Card>
@@ -509,16 +636,18 @@ const AdminPage = () => {
                                     onChange={e => setEditForm({...editForm, date: e.target.value})} 
                                 />
                             </Col>
-                            <Col md={12}>
-                                <Form.Check 
-                                    type="switch"
-                                    id="publish-switch"
-                                    label="Опублікувати на головній сторінці"
-                                    className="fw-bold text-primary mt-2"
-                                    checked={editForm.is_published || false}
-                                    onChange={e => setEditForm({...editForm, is_published: e.target.checked})}
-                                />
-                            </Col>
+                            {userRole !== 'guest' && (
+                                <Col md={12}>
+                                    <Form.Check 
+                                        type="switch"
+                                        id="publish-switch"
+                                        label="Опублікувати на головній сторінці"
+                                        className="fw-bold text-primary mt-2"
+                                        checked={editForm.is_published || false}
+                                        onChange={e => setEditForm({...editForm, is_published: e.target.checked})}
+                                    />
+                                </Col>
+                            )}
                         </Row>
                         <Form.Group className="mb-0">
                             <div className="d-flex justify-content-between mb-2">

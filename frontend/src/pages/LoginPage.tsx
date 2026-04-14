@@ -6,6 +6,7 @@ import { Lock, ShieldCheck, ArrowRight, LayoutDashboard, KeyRound } from 'lucide
 
 const LoginPage = () => {
     const [password, setPassword] = useState('');
+    const [nickname, setNickname] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -15,12 +16,14 @@ const LoginPage = () => {
         setLoading(true);
         setError('');
         try {
-            await loginAdmin(password);
+            const data = await loginAdmin(password, nickname);
             localStorage.setItem('isAdmin', 'true');
+            localStorage.setItem('userRole', data.role);
+            localStorage.setItem('ownerId', data.owner_id);
             // Force a reload or navigation to update the Header state
             window.location.href = '/admin';
-        } catch (err) {
-            setError('Невірний пароль доступу. Спробуйте ще раз.');
+        } catch (err: any) {
+            setError(err.response?.data?.detail || 'Невірний пароль доступу. Спробуйте ще раз.');
         } finally {
             setLoading(false);
         }
@@ -41,7 +44,7 @@ const LoginPage = () => {
                     <Card.Body className="p-4 p-md-5">
                         <div className="text-center mb-4">
                             <h4 className="fw-bold mb-1">Авторизація</h4>
-                            <p className="text-muted small">Введіть пароль адміністратора</p>
+                            <p className="text-muted small">Введіть пароль адміністратора або гостя</p>
                         </div>
 
                         {error && (
@@ -52,7 +55,7 @@ const LoginPage = () => {
                         )}
 
                         <Form onSubmit={handleSubmit}>
-                            <Form.Group className="mb-4">
+                            <Form.Group className="mb-3">
                                 <Form.Label className="small fw-bold text-uppercase text-muted ms-1">Пароль доступу</Form.Label>
                                 <InputGroup className="bg-light rounded-3 overflow-hidden border-0">
                                     <InputGroup.Text className="bg-light border-0 text-muted ps-3">
@@ -67,6 +70,25 @@ const LoginPage = () => {
                                         autoFocus
                                     />
                                 </InputGroup>
+                            </Form.Group>
+
+                            <Form.Group className="mb-4">
+                                <Form.Label className="small fw-bold text-uppercase text-muted ms-1">Нікнейм / Назва (для гостей)</Form.Label>
+                                <InputGroup className="bg-light rounded-3 overflow-hidden border-0">
+                                    <InputGroup.Text className="bg-light border-0 text-muted ps-3">
+                                        <KeyRound size={18} />
+                                    </InputGroup.Text>
+                                    <Form.Control 
+                                        type="text" 
+                                        placeholder="Наприклад: Організація_А" 
+                                        className="bg-light border-0 py-3 shadow-none"
+                                        value={nickname}
+                                        onChange={(e) => setNickname(e.target.value)}
+                                    />
+                                </InputGroup>
+                                <Form.Text className="text-muted small px-1">
+                                    Гості бачитимуть лише ті опитування, які вони завантажили під цим нікнеймом.
+                                </Form.Text>
                             </Form.Group>
 
                             <Button 

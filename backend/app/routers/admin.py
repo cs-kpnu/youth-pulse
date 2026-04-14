@@ -8,6 +8,7 @@ import pandas as pd
 import io
 import os
 import hmac
+import hashlib
 from bson.objectid import ObjectId
 
 router = APIRouter()
@@ -18,6 +19,7 @@ TEMP_STORAGE = {}
 
 class AuthRequest(BaseModel):
     password: str
+    nickname: Optional[str] = None
 
 class SaveSurveyRequest(BaseModel):
     temp_id: str
@@ -26,6 +28,7 @@ class SaveSurveyRequest(BaseModel):
     participants: int
     selected_types: Dict[str, str] # col_name -> type
     dropped_columns: List[str]
+    owner_id: Optional[str] = "root"
 
 class UpdateSurveyRequest(BaseModel):
     title: Optional[str] = None
@@ -42,19 +45,34 @@ class GenerateDescRequest(BaseModel):
 @router.post("/login")
 def login(req: AuthRequest):
     admin_pass = os.getenv("ADMIN_PASSWORD", "admin")
+    guest_pass = os.getenv("GUEST_PASSWORD")
+    
     if hmac.compare_digest(req.password, admin_pass):
-        return {"status": "ok"}
+        return {"status": "ok", "role": "admin", "owner_id": "root"}
+        
+    if guest_pass and hmac.compare_digest(req.password, guest_pass):
+        if not req.nickname:
+            raise HTTPException(status_code=400, detail="Nickname is required for guest access")
+        return {"status": "ok", "role": "guest", "owner_id": req.nickname}
+        
     raise HTTPException(status_code=401, detail="Invalid password")
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     contents = await file.read()
     try:
+        # Calculate data hash for duplicate detection
+        data_hash = hashlib.sha256(contents).hexdigest()
+        
+        # Check if this file was already uploaded by checking DB
+        db = get_db()
+        existing = db.surveys.find_one({"data_hash": data_hash})
+        
         df, suggested_drop = process_uploaded_file(io.BytesIO(contents), file.filename)
         
         # Store in temp memory
         temp_id = str(abs(hash(file.filename + pd.Timestamp.now().strftime("%S"))))
-        TEMP_STORAGE[temp_id] = df
+        TEMP_STORAGE[temp_id] = {"df": df, "hash": data_hash}
         
         columns_info = []
         for col in df.columns:
@@ -70,7 +88,9 @@ async def upload_file(file: UploadFile = File(...)):
             "temp_id": temp_id,
             "filename": file.filename,
             "columns": columns_info,
-            "suggested_drop": suggested_drop
+            "suggested_drop": suggested_drop,
+            "duplicate_found": existing["title"] if existing else None,
+            "duplicate_id": str(existing["id"]) if existing else None
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -80,7 +100,15 @@ def save_survey(req: SaveSurveyRequest):
     if req.temp_id not in TEMP_STORAGE:
         raise HTTPException(status_code=404, detail="Session expired or file not found")
         
-    df = TEMP_STORAGE[req.temp_id]
+    temp_data = TEMP_STORAGE[req.temp_id]
+    df = temp_data["df"]
+    data_hash = temp_data["hash"]
+    
+    # Final safety check for duplicates in DB before actual save
+    db = get_db()
+    if db.surveys.find_one({"data_hash": data_hash}):
+        raise HTTPException(status_code=409, detail="Це опитування вже є в системі")
+        
     participants_count = len(df)
     
     # Drop columns
@@ -105,7 +133,9 @@ def save_survey(req: SaveSurveyRequest):
         "participants": participants_count,
         "date": pd.Timestamp.now().strftime("%Y-%m-%d"),
         "questions": final_questions,
-        "is_published": False
+        "is_published": False,
+        "owner_id": req.owner_id,
+        "data_hash": data_hash
     }
     
     # Auto-generate description
@@ -159,11 +189,17 @@ def generate_desc(req: GenerateDescRequest):
     return {"description": desc}
 
 @router.get("/all_full")
-def get_all_surveys_full():
-    """Returns surveys with _id for Editor"""
+def get_all_surveys_full(owner_id: Optional[str] = None):
+    """Returns surveys filtered by owner if provided"""
     db = get_db()
+    
+    query = {}
+    # If not 'root' (admin), filter by owner_id
+    if owner_id and owner_id != "root":
+        query = {"owner_id": owner_id}
+        
     surveys = []
-    for s in db.surveys.find({}):
+    for s in db.surveys.find(query):
         s["_id"] = str(s["_id"])
         if "is_published" not in s:
             s["is_published"] = False

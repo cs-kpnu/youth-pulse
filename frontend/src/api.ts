@@ -19,8 +19,8 @@ export const getSurvey = async (id: string) => {
     return response.data;
 };
 
-export const loginAdmin = async (password: string) => {
-    const response = await api.post('admin/login', { password });
+export const loginAdmin = async (password: string, nickname?: string) => {
+    const response = await api.post('admin/login', { password, nickname });
     return response.data;
 };
 
@@ -34,7 +34,8 @@ export const uploadFile = async (file: File) => {
 };
 
 export const saveSurvey = async (data: any) => {
-    const response = await api.post('admin/save', data);
+    const ownerId = localStorage.getItem('ownerId') || 'root';
+    const response = await api.post('admin/save', { ...data, owner_id: ownerId });
     return response.data;
 };
 
@@ -44,7 +45,10 @@ export const analyzeAll = async (surveyId: string | number, title: string, quest
 };
 
 export const getAllSurveysFull = async () => {
-    const response = await api.get('admin/all_full');
+    const ownerId = localStorage.getItem('ownerId');
+    const response = await api.get('admin/all_full', {
+        params: { owner_id: ownerId }
+    });
     return response.data;
 };
 

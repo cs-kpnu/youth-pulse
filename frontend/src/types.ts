@@ -9,6 +9,7 @@ export interface Survey {
     ai_description?: string;
     questions?: Question[];
     is_published?: boolean;
+    owner_id?: string;
 }
 
 export interface Question {

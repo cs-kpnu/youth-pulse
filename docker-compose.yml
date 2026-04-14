@@ -19,6 +19,7 @@ services:
       - DB_NAME=${DB_NAME:-youth_pulse_db}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - GUEST_PASSWORD=${GUEST_PASSWORD}
     depends_on:
       - mongodb
     networks:
