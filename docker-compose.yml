@@ -18,6 +18,7 @@ services:
       - MONGO_URI=${MONGO_URI}
       - DB_NAME=${DB_NAME:-youth_pulse_db}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     depends_on:
       - mongodb
     networks:
