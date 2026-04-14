@@ -2,9 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import surveys, admin
 from dotenv import load_dotenv
+from pathlib import Path
 import uvicorn
 
-load_dotenv()
+# Load .env from backend/ and project root
+backend_dir = Path(__file__).resolve().parent
+root_dir = backend_dir.parent
+
+load_dotenv(backend_dir / ".env")
+load_dotenv(root_dir / ".env")
 
 app = FastAPI(title="YouthPulse API")
 
