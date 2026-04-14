@@ -9,3 +9,4 @@ openpyxl
 pydantic
 fpdf2
 matplotlib
+dnspython==2.7.0
