@@ -363,8 +363,7 @@ class TestPromptStructure:
         call_args = mock_client.models.generate_content.call_args
         prompt = call_args[1]['contents'] if 'contents' in call_args[1] else call_args[0][1]
         
-        assert "Роль:" in prompt
-        assert "Соціолог" in prompt
+        assert "соціолог-аналітик" in prompt
 
     @patch('app.utils.ai_helper.get_client')
     def test_per_question_prompt_language_requirement(self, mock_get_client):
@@ -381,7 +380,7 @@ class TestPromptStructure:
         prompt = call_args[1]['contents'] if 'contents' in call_args[1] else call_args[0][1]
         
         assert "Мова:" in prompt
-        assert "Українська" in prompt
+        assert "українська" in prompt
 
     @patch('app.utils.ai_helper.get_client')
     def test_batch_prompt_requires_json_output(self, mock_get_client):

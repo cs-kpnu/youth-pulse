@@ -23,7 +23,7 @@ const Footer = () => {
                                 <span className="h4 fw-bold mb-0" style={{ letterSpacing: '-1px' }}>YouthPulse</span>
                             </div>
                             <p className="text-secondary pe-lg-5" style={{ lineHeight: '1.7', maxWidth: '400px' }}>
-                                Платформа інтелектуального аналізу соціальних трендів. Ми перетворюємо результати опитувань у змістовні інсайти для кращого майбутнього молоді.
+                                Платформа інтелектуального аналізу соціальних трендів. Ми перетворюємо результати опитувань у змістовні інсайти для глибокого розуміння даних.
                             </p>
                             <div className="d-flex gap-3 mt-4">
                                 <a href="#" className="social-link shadow-sm"><Github size={18} /></a>
@@ -71,7 +71,7 @@ const Footer = () => {
                     <div className="d-flex align-items-center gap-1">
                         <span>Зроблено з</span>
                         <Heart size={12} className="text-danger fill-current" />
-                        <span>для розвитку молодіжної політики</span>
+                        <span>для ефективної аналітики</span>
                     </div>
                 </div>
             </Container>

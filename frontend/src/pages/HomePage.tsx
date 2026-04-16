@@ -70,7 +70,7 @@ const HomePage = () => {
                             </div>
                         </div>
                         <h1 className="display-6 fw-bold mb-0 text-dark">
-                            Дослідження <span className="text-primary">молоді</span>
+                            Аналітика <span className="text-primary">моніторингів</span>
                         </h1>
                         <p className="text-secondary mt-2 mb-0 pe-lg-5">
                             Відкрийте для себе актуальну аналітику та результати опитувань нашої спільноти.

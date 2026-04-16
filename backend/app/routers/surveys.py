@@ -47,7 +47,7 @@ def export_survey_pdf(survey_id: str):
 def analyze_all(survey_id: str, req: BatchAnalysisRequest):
     results = analyze_whole_survey(req.title, req.questions)
     if not results:
-        raise HTTPException(status_code=500, detail="AI Analysis failed")
+        raise HTTPException(status_code=503, detail="Сервіс штучного інтелекту наразі перевантажений, оскільки використовуються безкоштовні моделі. Будь ласка, спробуйте пізніше.")
     
     for q_idx, text in results.items():
         save_ai_result(survey_id, int(q_idx), text)

@@ -35,8 +35,8 @@ class TestGetAIAnalysis:
         prompt = call_args[1]['contents'] if 'contents' in call_args[1] else call_args[0][1]
         
         # Verify prompt contains essential elements
-        assert "Соціолог" in prompt
-        assert "Українська" in prompt
+        assert "соціолог-аналітик" in prompt
+        assert "українська" in prompt.lower()
         assert question_text in prompt
         assert "теми" in prompt.lower() or "настрій" in prompt.lower()
 
@@ -57,8 +57,8 @@ class TestGetAIAnalysis:
         call_args = mock_client.models.generate_content.call_args
         prompt = call_args[1]['contents'] if 'contents' in call_args[1] else call_args[0][1]
         
-        assert "Соціолог" in prompt
-        assert "статистику" in prompt.lower()
+        assert "соціолог-аналітик" in prompt
+        assert "статистичні" in prompt.lower()
         assert question_text in prompt
 
     @patch('app.utils.ai_helper.get_client')
@@ -309,8 +309,8 @@ class TestGenerateSurveyDescription:
         call_args = mock_client.models.generate_content.call_args
         prompt = call_args[1]['contents'] if 'contents' in call_args[1] else call_args[0][1]
         
-        assert "YouthPulse" in prompt
-        assert "IT спеціальності" in prompt or "IT" in prompt
+        assert "каталогу" in prompt
+        assert "суть та тематику" in prompt or "тематику" in prompt
 
     @patch('app.utils.ai_helper.get_client')
     def test_prompt_contains_language_requirement(self, mock_get_client):

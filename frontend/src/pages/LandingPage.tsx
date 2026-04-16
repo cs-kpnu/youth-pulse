@@ -73,10 +73,10 @@ const LandingPage = () => {
                     <Row className="align-items-center min-vh-75">
                         <Col lg={6} className="text-start fade-in-up">
                             <h1 className="display-3 fw-bold mb-4 text-dark" style={{ letterSpacing: '-2px', lineHeight: '1.1' }}>
-                                Глибока аналітика <span className="text-primary">потреб молоді</span>
+                                Глибока аналітика <span className="text-primary">результатів моніторингів</span>
                             </h1>
                             <p className="lead text-secondary mb-5 fs-4" style={{ maxWidth: '500px' }}>
-                                YouthPulse поєднує реальні дані та потужність штучного інтелекту для розуміння трендів молодіжного середовища.
+                                YouthPulse поєднує реальні дані та потужність штучного інтелекту для глибокого аналізу різних досліджень.
                             </p>
                             <div className="d-flex flex-column flex-sm-row gap-3">
                                 <Button 
@@ -187,7 +187,7 @@ const LandingPage = () => {
                                                 <div className="flex-grow-1 mb-4">
                                                     <div className="description-expand-container">
                                                         <p className="text-secondary small mb-0" style={{ lineHeight: '1.6' }}>
-                                                            {survey.ai_description || 'Детальний аналіз та візуалізація результатів опитування молоді щодо актуальних соціальних тем.'}
+                                                            {survey.ai_description || 'Детальний аналіз та візуалізація результатів моніторингів та опитувань щодо актуальних соціальних тем.'}
                                                         </p>
                                                     </div>
                                                 </div>

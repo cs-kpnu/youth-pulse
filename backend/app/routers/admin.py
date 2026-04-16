@@ -138,11 +138,7 @@ def save_survey(req: SaveSurveyRequest):
         "data_hash": data_hash
     }
     
-    # Auto-generate description
-    desc = generate_survey_description(req.title, final_questions)
-    if desc:
-        new_survey["ai_description"] = desc
-        
+    # Auto-generation removed. User can generate later if they want.
     get_db().surveys.insert_one(new_survey)
     
     # Cleanup
