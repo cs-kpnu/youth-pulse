@@ -5,7 +5,8 @@ from unittest.mock import Mock, patch, MagicMock
 from app.utils.ai_helper import (
     get_ai_analysis,
     analyze_whole_survey,
-    generate_survey_description
+    generate_survey_description,
+    _generate_with_fallback
 )
 
 
@@ -349,3 +350,53 @@ class TestGenerateSurveyDescription:
         result = generate_survey_description("Test", [])
         
         assert result is None
+
+class TestGenerateWithFallback:
+    """Tests for the fallback mechanism when models fail"""
+
+    def test_first_model_succeeds(self):
+        client = Mock()
+        mock_response = Mock()
+        mock_response.text = "Success"
+        client.models.generate_content.return_value = mock_response
+
+        response = _generate_with_fallback(client, "Test prompt")
+
+        assert response.text == "Success"
+        # Should only be called once, for the first model
+        assert client.models.generate_content.call_count == 1
+        call_args = client.models.generate_content.call_args
+        assert call_args[1]['model'] == 'gemini-3.1-flash-lite-preview'
+
+    def test_fallback_to_second_model(self):
+        client = Mock()
+        mock_response = Mock()
+        mock_response.text = "Fallback Success"
+        
+        # First call raises an exception, second call succeeds
+        client.models.generate_content.side_effect = [
+            Exception("503 Overloaded"),
+            mock_response
+        ]
+
+        response = _generate_with_fallback(client, "Test prompt")
+
+        assert response.text == "Fallback Success"
+        assert client.models.generate_content.call_count == 2
+        
+        # Verify the second call used the fallback model
+        calls = client.models.generate_content.call_args_list
+        assert calls[0][1]['model'] == 'gemini-3.1-flash-lite-preview'
+        assert calls[1][1]['model'] == 'gemini-2.5-flash'
+
+    def test_all_models_fail(self):
+        client = Mock()
+        # All three models fail
+        client.models.generate_content.side_effect = Exception("System overloaded")
+
+        with pytest.raises(Exception) as exc_info:
+            _generate_with_fallback(client, "Test prompt")
+            
+        assert "Сервіс штучного інтелекту наразі перевантажений" in str(exc_info.value)
+        assert client.models.generate_content.call_count == 3
+
