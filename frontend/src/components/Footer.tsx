@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { 
     Github, 
     Mail, 
-    Globe, 
     ShieldCheck, 
     BarChart3,
     Heart
@@ -15,8 +14,8 @@ const Footer = () => {
     return (
         <footer className="footer-new mt-auto pt-5 pb-4 border-top">
             <Container>
-                <Row className="gy-5">
-                    <Col lg={5} md={12}>
+                <Row className="gy-4 justify-content-between">
+                    <Col lg={6} md={12}>
                         <div className="footer-brand mb-4">
                             <div className="d-flex align-items-center gap-2 text-primary mb-3">
                                 <BarChart3 size={28} />
@@ -26,39 +25,20 @@ const Footer = () => {
                                 Платформа інтелектуального аналізу соціальних трендів. Ми перетворюємо результати опитувань у змістовні інсайти для глибокого розуміння даних.
                             </p>
                             <div className="d-flex gap-3 mt-4">
-                                <a href="#" className="social-link shadow-sm"><Github size={18} /></a>
-                                <a href="mailto:support@youthpulse.ua" className="social-link shadow-sm"><Mail size={18} /></a>
-                                <a href="#" className="social-link shadow-sm"><Globe size={18} /></a>
+                                <a href="https://github.com/Keyd8n" target="_blank" rel="noopener noreferrer" className="social-link shadow-sm"><Github size={18} /></a>
+                                <a href="mailto:kn1b22.demchenko@kpnu.edu.ua" className="social-link shadow-sm"><Mail size={18} /></a>
                             </div>
                         </div>
                     </Col>
 
-                    <Col lg={2} md={4} sm={6}>
-                        <h6 className="fw-bold text-uppercase mb-4 small tracking-wider">Навігація</h6>
-                        <ul className="list-unstyled footer-links">
-                            <li><Link to="/">Головна</Link></li>
-                            <li><Link to="/surveys">Всі опитування</Link></li>
-                            <li><Link to="/login">Панель управління</Link></li>
-                        </ul>
-                    </Col>
-
-                    <Col lg={2} md={4} sm={6}>
-                        <h6 className="fw-bold text-uppercase mb-4 small tracking-wider">Платформа</h6>
-                        <ul className="list-unstyled footer-links">
-                            <li><a href="#workflow">Як це працює</a></li>
-                            <li><a href="#">Документація</a></li>
-                            <li><a href="#">Конфіденційність</a></li>
-                        </ul>
-                    </Col>
-
-                    <Col lg={3} md={4}>
-                        <h6 className="fw-bold text-uppercase mb-4 small tracking-wider">Статус системи</h6>
-                        <div className="status-card p-3 rounded-4 bg-opacity-10 bg-success border border-success border-opacity-10 d-flex align-items-center gap-3">
-                            <div className="status-dot animate-pulse"></div>
-                            <div className="small">
-                                <div className="fw-bold text-success">Системи активні</div>
-                                <div className="text-secondary extra-small">AI Модулі працюють в штатному режимі</div>
-                            </div>
+                    <Col lg={4} md={12} className="d-lg-flex justify-content-lg-end text-lg-end">
+                        <div>
+                            <h6 className="fw-bold text-uppercase mb-4 small tracking-wider">Навігація</h6>
+                            <ul className="list-unstyled footer-links">
+                                <li><Link to="/">Головна</Link></li>
+                                <li><Link to="/surveys">Всі опитування</Link></li>
+                                <li><Link to="/login">Панель управління</Link></li>
+                            </ul>
                         </div>
                     </Col>
                 </Row>
@@ -119,22 +99,7 @@ const Footer = () => {
                     padding-left: 5px;
                 }
 
-                .status-dot {
-                    width: 10px;
-                    height: 10px;
-                    background: #28a745;
-                    border-radius: 50%;
-                    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
-                }
-                
-                @keyframes pulse-dot {
-                    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
-                    70% { box-shadow: 0 0 0 8px rgba(40, 167, 69, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-                }
-                .status-dot.animate-pulse {
-                    animation: pulse-dot 2s infinite;
-                }
+
             `}</style>
         </footer>
     );
