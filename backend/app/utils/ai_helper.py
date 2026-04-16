@@ -15,11 +15,13 @@ def _generate_with_fallback(client, contents, config=None):
     last_error = None
     for model in models:
         try:
-            return client.models.generate_content(
+            response = client.models.generate_content(
                 model=model,
                 contents=contents,
                 config=config
             )
+            print(f"\n[AI SUCCESS - {model}] Відповідь ШІ:\n{response.text}\n{'-'*50}\n")
+            return response
         except Exception as e:
             last_error = e
             print(f"Model {model} failed: {e}. Trying next...")
@@ -104,11 +106,11 @@ def analyze_whole_survey(survey_title, questions_list):
 Для кожного питання (за його Q_ID) напиши аналітичний висновок.
 
 Вимоги до кожного висновку:
-• Рівно 3 розгорнуті абзаци (кожен по 2 речення):
+• Рівно 3 розгорнуті абзаци. Кожен абзац має бути детальним (мінімум 3-4 довгих речення):
   — Абзац 1: Загальна картина — детально опиши які варіанти або теми домінують і чому.
   — Абзац 2: Деталізація — глибокий аналіз розподілу, відхилень, неочевидних патернів.
   — Абзац 3: Підсумок — розгорнутий опис того, що це означає для цільової аудиторії.
-• Відповідь не має бути короткою, пиши професійно і розгорнуто.
+• Загальний обсяг тексту має бути великим, пиши професійно і максимально повно.
 • Мова: українська.
 • Без вступних фраз.
 
